@@ -1,0 +1,111 @@
+diff --git a/packages/vite/src/node/external.ts b/packages/vite/src/node/external.ts
+index de55f0057..dc00b0491 100644
+--- a/packages/vite/src/node/external.ts
++++ b/packages/vite/src/node/external.ts
+@@ -2,7 +2,7 @@ import path from 'node:path'
+ import type { PartialEnvironment } from './baseEnvironment'
+ import type { Environment } from './environment'
+ import type { InternalResolveOptions } from './plugins/resolve'
+-import { tryNodeResolve } from './plugins/resolve'
++import { getNodeResolveBasedir, tryNodeResolve } from './plugins/resolve'
+ import {
+   bareImportRE,
+   createDebugger,
+@@ -51,6 +51,8 @@ export function createIsConfiguredAsExternal(
+     isProduction: false,
+     isBuild: true,
+     conditions: targetConditions,
++    // kept apart from `config.packageCache` as `isProduction` is fixed here
++    packageCache: new Map(),
+   }
+ 
+   const isExternalizable = (
+@@ -128,12 +130,24 @@ function createIsExternal(
+   environment: Environment,
+ ): (id: string, importer?: string) => boolean {
+   const processedIds = new Map<string, boolean>()
++  const importerBasedirs = new Map<string, string>()
+ 
+   const isConfiguredAsExternal = createIsConfiguredAsExternal(environment)
+ 
++  const getBasedir = (importer: string) => {
++    let basedir = importerBasedirs.get(importer)
++    if (basedir === undefined) {
++      basedir = getNodeResolveBasedir(importer, environment.config.root)
++      importerBasedirs.set(importer, basedir)
++    }
++    return basedir
++  }
++
+   return (id: string, importer?: string) => {
+-    if (processedIds.has(id)) {
+-      return processedIds.get(id)!
++    // the result depends on the directory bare imports are resolved from
++    const cacheKey = importer ? `${id}\0${getBasedir(importer)}` : id
++    if (processedIds.has(cacheKey)) {
++      return processedIds.get(cacheKey)!
+     }
+     let isExternal = false
+     if (id[0] !== '.' && !path.isAbsolute(id)) {
+@@ -141,7 +155,7 @@ function createIsExternal(
+         isBuiltin(environment.config.resolve.builtins, id) ||
+         isConfiguredAsExternal(id, importer)
+     }
+-    processedIds.set(id, isExternal)
++    processedIds.set(cacheKey, isExternal)
+     return isExternal
+   }
+ }
+diff --git a/packages/vite/src/node/plugins/resolve.ts b/packages/vite/src/node/plugins/resolve.ts
+index 0058af15b..fef2daff4 100644
+--- a/packages/vite/src/node/plugins/resolve.ts
++++ b/packages/vite/src/node/plugins/resolve.ts
+@@ -719,6 +719,25 @@ function tryCleanFsResolve(
+   }
+ }
+ 
++/**
++ * The directory `tryNodeResolve` starts resolving a bare import from:
++ * the importer's directory if the importer exists on disk, otherwise `root`.
++ */
++export function getNodeResolveBasedir(
++  importer: string | null | undefined,
++  root: string,
++): string {
++  if (
++    importer &&
++    path.isAbsolute(importer) &&
++    // css processing appends `*` for importer
++    (importer.endsWith('*') || fs.existsSync(cleanUrl(importer)))
++  ) {
++    return path.dirname(importer)
++  }
++  return root
++}
++
+ export function tryNodeResolve(
+   id: string,
+   importer: string | null | undefined,
+@@ -734,19 +753,9 @@ export function tryNodeResolve(
+   // trim them to support importing package with queries (e.g. `import css from 'normalize.css?inline'`)
+   const pkgId = deepMatch ? deepMatch[1] || deepMatch[2] : cleanUrl(id)
+ 
+-  let basedir: string
+-  if (dedupe.includes(pkgId)) {
+-    basedir = root
+-  } else if (
+-    importer &&
+-    path.isAbsolute(importer) &&
+-    // css processing appends `*` for importer
+-    (importer.endsWith('*') || fs.existsSync(cleanUrl(importer)))
+-  ) {
+-    basedir = path.dirname(importer)
+-  } else {
+-    basedir = root
+-  }
++  const basedir = dedupe.includes(pkgId)
++    ? root
++    : getNodeResolveBasedir(importer, root)
+ 
+   const isModuleBuiltin = (id: string) => isBuiltin(options.builtins, id)
+ 

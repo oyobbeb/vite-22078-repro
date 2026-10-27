@@ -5,6 +5,7 @@
 #   a-dirname       cache key = specifier + importer's directory
 #   b-packagecache  #22080's key, plus packageCache in the resolve options
 #   a-localcache    a-dirname, plus a packageCache used only by this check
+#   pr-23919        a-localcache, keyed by the directory tryNodeResolve resolves from (vitejs/vite#23919)
 # usage: bench/run-variants.sh <vite clone at e954a9cda, after pnpm install>
 set -euo pipefail
 
@@ -29,7 +30,7 @@ fi
 echo "vite $(git -C "$vite_dir" rev-parse --short HEAD), node $(node -v), $(node -p 'require("os").cpus()[0].model')"
 node "$bench_dir/gen.mjs"
 
-for variant in main pr-22080 a-dirname b-packagecache a-localcache; do
+for variant in main pr-22080 a-dirname b-packagecache a-localcache pr-23919; do
   if [ "$variant" != main ]; then
     applied="$bench_dir/patches/$variant.patch"
     git -C "$vite_dir" apply "$applied"
