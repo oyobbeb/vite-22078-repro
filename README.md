@@ -46,6 +46,7 @@ To try a local Vite build: `VITE_ENTRY=/path/to/vite/packages/vite/dist/node/ind
 | `pr-22080` | specifier + importer | unchanged |
 | `a-dirname` | specifier + importer's directory | unchanged |
 | `b-packagecache` | specifier + importer | `packageCache: config.packageCache` |
+| `a-localcache` | specifier + importer's directory | `packageCache: new Map()`, used only by this check |
 
 ```sh
 git clone https://github.com/vitejs/vite.git vite-bench

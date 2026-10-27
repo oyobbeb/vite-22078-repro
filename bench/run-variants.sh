@@ -4,6 +4,7 @@
 #   pr-22080        cache key = specifier + importer (vitejs/vite#22080)
 #   a-dirname       cache key = specifier + importer's directory
 #   b-packagecache  #22080's key, plus packageCache in the resolve options
+#   a-localcache    a-dirname, plus a packageCache used only by this check
 # usage: bench/run-variants.sh <vite clone at e954a9cda, after pnpm install>
 set -euo pipefail
 
@@ -28,7 +29,7 @@ fi
 echo "vite $(git -C "$vite_dir" rev-parse --short HEAD), node $(node -v), $(node -p 'require("os").cpus()[0].model')"
 node "$bench_dir/gen.mjs"
 
-for variant in main pr-22080 a-dirname b-packagecache; do
+for variant in main pr-22080 a-dirname b-packagecache a-localcache; do
   if [ "$variant" != main ]; then
     applied="$bench_dir/patches/$variant.patch"
     git -C "$vite_dir" apply "$applied"
