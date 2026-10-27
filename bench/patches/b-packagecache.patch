@@ -1,0 +1,35 @@
+--- a/packages/vite/src/node/external.ts
++++ b/packages/vite/src/node/external.ts
+@@ -51,6 +51,7 @@
+     isProduction: false,
+     isBuild: true,
+     conditions: targetConditions,
++    packageCache: config.packageCache,
+   }
+ 
+   const isExternalizable = (
+@@ -132,8 +133,13 @@
+   const isConfiguredAsExternal = createIsConfiguredAsExternal(environment)
+ 
+   return (id: string, importer?: string) => {
+-    if (processedIds.has(id)) {
+-      return processedIds.get(id)!
++    // Cache key includes importer because different importers may resolve
++    // the same bare specifier to different packages (e.g. in pnpm monorepos
++    // with multiple versions of a dependency). Without importer in the key,
++    // the first resolution's result is incorrectly reused for all importers.
++    const cacheKey = importer ? `${id}\0${importer}` : id
++    if (processedIds.has(cacheKey)) {
++      return processedIds.get(cacheKey)!
+     }
+     let isExternal = false
+     if (id[0] !== '.' && !path.isAbsolute(id)) {
+@@ -141,7 +147,7 @@
+         isBuiltin(environment.config.resolve.builtins, id) ||
+         isConfiguredAsExternal(id, importer)
+     }
+-    processedIds.set(id, isExternal)
++    processedIds.set(cacheKey, isExternal)
+     return isExternal
+   }
+ }

@@ -1,0 +1,25 @@
+--- a/packages/vite/src/node/external.ts
++++ b/packages/vite/src/node/external.ts
+@@ -132,8 +132,11 @@
+   const isConfiguredAsExternal = createIsConfiguredAsExternal(environment)
+ 
+   return (id: string, importer?: string) => {
+-    if (processedIds.has(id)) {
+-      return processedIds.get(id)!
++    // Bare imports are resolved from the importer's directory, so the
++    // decision only depends on the specifier and that directory
++    const cacheKey = importer ? `${id}\0${path.dirname(importer)}` : id
++    if (processedIds.has(cacheKey)) {
++      return processedIds.get(cacheKey)!
+     }
+     let isExternal = false
+     if (id[0] !== '.' && !path.isAbsolute(id)) {
+@@ -141,7 +144,7 @@
+         isBuiltin(environment.config.resolve.builtins, id) ||
+         isConfiguredAsExternal(id, importer)
+     }
+-    processedIds.set(id, isExternal)
++    processedIds.set(cacheKey, isExternal)
+     return isExternal
+   }
+ }
