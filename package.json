@@ -1,0 +1,7 @@
+{
+  "name": "vite-22078-repro",
+  "private": true,
+  "type": "module",
+  "dependencies": { "pkg-a": "workspace:*", "pkg-b": "workspace:*" },
+  "devDependencies": { "vite": "8.3.5" }
+}
