@@ -1,5 +1,5 @@
 diff --git a/packages/vite/src/node/external.ts b/packages/vite/src/node/external.ts
-index de55f0057..dc00b0491 100644
+index de55f0057..9ce24702b 100644
 --- a/packages/vite/src/node/external.ts
 +++ b/packages/vite/src/node/external.ts
 @@ -2,7 +2,7 @@ import path from 'node:path'
@@ -30,7 +30,7 @@ index de55f0057..dc00b0491 100644
  
 +  const getBasedir = (importer: string) => {
 +    let basedir = importerBasedirs.get(importer)
-+    if (basedir === undefined) {
++    if (!basedir) {
 +      basedir = getNodeResolveBasedir(importer, environment.config.root)
 +      importerBasedirs.set(importer, basedir)
 +    }
@@ -57,16 +57,17 @@ index de55f0057..dc00b0491 100644
    }
  }
 diff --git a/packages/vite/src/node/plugins/resolve.ts b/packages/vite/src/node/plugins/resolve.ts
-index 0058af15b..fef2daff4 100644
+index 0058af15b..6f462961c 100644
 --- a/packages/vite/src/node/plugins/resolve.ts
 +++ b/packages/vite/src/node/plugins/resolve.ts
-@@ -719,6 +719,25 @@ function tryCleanFsResolve(
+@@ -719,6 +719,26 @@ function tryCleanFsResolve(
    }
  }
  
 +/**
-+ * The directory `tryNodeResolve` starts resolving a bare import from:
-+ * the importer's directory if the importer exists on disk, otherwise `root`.
++ * The directory `tryNodeResolve` starts resolving a bare import from, unless
++ * the package is deduped: the importer's directory if the importer exists on
++ * disk, otherwise `root`.
 + */
 +export function getNodeResolveBasedir(
 +  importer: string | null | undefined,
@@ -86,7 +87,7 @@ index 0058af15b..fef2daff4 100644
  export function tryNodeResolve(
    id: string,
    importer: string | null | undefined,
-@@ -734,19 +753,9 @@ export function tryNodeResolve(
+@@ -734,19 +754,9 @@ export function tryNodeResolve(
    // trim them to support importing package with queries (e.g. `import css from 'normalize.css?inline'`)
    const pkgId = deepMatch ? deepMatch[1] || deepMatch[2] : cleanUrl(id)
  

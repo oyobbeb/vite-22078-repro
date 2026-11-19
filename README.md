@@ -38,7 +38,7 @@ To try a local Vite build: `VITE_ENTRY=/path/to/vite/packages/vite/dist/node/ind
 
 `bench/` measures how long a fresh dev server takes to load 2,000 modules (100 folders × 20 files) that each import the same 10 packages through the SSR module runner. It runs five times and prints the median.
 
-`bench/run-variants.sh` builds Vite from a local clone once per variant and runs the benchmark against each build:
+`bench/run-variants.sh` builds Vite from a local clone once per variant, then runs the benchmark against each build for ten rounds (set `ROUNDS` to change that). Each round starts from a different variant, so none always runs first. At the end it prints the median and range of each variant's rounds:
 
 | Variant | `processedIds` cache key | Resolve options |
 | --- | --- | --- |
@@ -47,6 +47,7 @@ To try a local Vite build: `VITE_ENTRY=/path/to/vite/packages/vite/dist/node/ind
 | `a-dirname` | specifier + importer's directory | unchanged |
 | `b-packagecache` | specifier + importer | `packageCache: config.packageCache` |
 | `a-localcache` | specifier + importer's directory | `packageCache: new Map()`, used only by this check |
+| `b-localcache` | specifier + importer | `packageCache: new Map()`, used only by this check |
 | `pr-23919` | specifier + directory `tryNodeResolve` resolves from (root if the importer is not on disk) | `packageCache: new Map()`, used only by this check |
 
 ```sh
@@ -59,4 +60,4 @@ git clone https://github.com/oyobbeb/vite-22078-repro.git
 vite-22078-repro/bench/run-variants.sh vite-bench
 ```
 
-The script only touches `packages/vite/src/node/external.ts` and restores it after each variant.
+The script only touches `packages/vite/src/node` and restores it after each variant. While it runs, it keeps each build in `packages/vite/dist-<variant>`, and removes them when it exits.
